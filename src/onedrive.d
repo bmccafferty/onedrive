@@ -467,9 +467,11 @@ class OneDriveApi {
 			} else {
 				// The application cannot be authorised when using --dry-run as we have to write out the authentication data, which negates the whole 'dry-run' process
 				addLogEntry();
-				addLogEntry("The application requires authorisation, which involves saving authentication data on your system. Note that authorisation cannot be completed with the '--dry-run' option.");
+				addLogEntry("The application requires authorisation, which involves saving authentication data on your system. Application authorisation cannot be completed when using the '--dry-run' option.");
 				addLogEntry();
-				addLogEntry("To exclusively authorise the application without performing any additional actions, use this command: onedrive");
+				addLogEntry("To authorise the application please use your original command without '--dry-run'.");
+				addLogEntry();
+				addLogEntry("To exclusively authorise the application without performing any additional actions, do not add '--sync' or '--monitor' to your command line.");
 				addLogEntry();
 				forceExit();
 			}
@@ -628,6 +630,16 @@ class OneDriveApi {
 		//TODO: investigate why this always fail with 412 (Precondition Failed)
 		// if (eTag) requestHeaders["If-Match"] = eTag;
 		performDelete(url);
+	}
+	
+	// https://learn.microsoft.com/en-us/graph/api/driveitem-permanentdelete?view=graph-rest-1.0
+	void permanentDeleteById(const(char)[] driveId, const(char)[] id, const(char)[] eTag = null) {
+		// string[string] requestHeaders;
+		const(char)[] url = driveByIdUrl ~ driveId ~ "/items/" ~ id ~ "/permanentDelete";
+		//TODO: investigate why this always fail with 412 (Precondition Failed)
+		// if (eTag) requestHeaders["If-Match"] = eTag;
+		// as per documentation, a permanentDelete needs to be a HTTP POST
+		performPermanentDelete(url);
 	}
 	
 	// https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_post_children
@@ -958,6 +970,14 @@ class OneDriveApi {
 		bool validateJSONResponse = false;
 		oneDriveErrorHandlerWrapper((CurlResponse response) {
 			connect(HTTP.Method.del, url, false, response, requestHeaders);
+			return curlEngine.execute();
+		}, validateJSONResponse, callingFunction, lineno);
+	}
+	
+	private void performPermanentDelete(const(char)[] url, string[string] requestHeaders=null, string callingFunction=__FUNCTION__, int lineno=__LINE__) {
+		bool validateJSONResponse = false;
+		oneDriveErrorHandlerWrapper((CurlResponse response) {
+			connect(HTTP.Method.post, url, false, response, requestHeaders);
 			return curlEngine.execute();
 		}, validateJSONResponse, callingFunction, lineno);
 	}
